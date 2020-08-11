@@ -6,6 +6,10 @@ import (
 	"github.com/pingcap/errors"
 )
 
+// badger.Entry badger.DB badger.Txn
+// proto.Message
+// WriteBatch struct
+
 type WriteBatch struct {
 	entries       []*badger.Entry
 	size          int
@@ -73,7 +77,7 @@ func (wb *WriteBatch) RollbackToSafePoint() {
 
 func (wb *WriteBatch) WriteToDB(db *badger.DB) error {
 	if len(wb.entries) > 0 {
-		err := db.Update(func(txn *badger.Txn) error {
+		err := db.Update(func(txn *badger.Txn) error {	// func as param?
 			for _, entry := range wb.entries {
 				var err1 error
 				if len(entry.Value) == 0 {

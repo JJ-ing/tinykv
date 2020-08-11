@@ -62,6 +62,7 @@ func TestRawGet1(t *testing.T) {
 		Key: []byte{99},
 		Cf:  cf,
 	}
+
 	resp, err := server.RawGet(nil, req)
 	assert.Nil(t, err)
 	assert.Equal(t, []byte{42}, resp.Value)
