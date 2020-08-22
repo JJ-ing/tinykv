@@ -157,7 +157,7 @@ func testNonleaderStartElection(t *testing.T, state StateType) {
 		{From: 1, To: 3, Term: 2, MsgType: pb.MessageType_MsgRequestVote},
 	}
 	if !reflect.DeepEqual(msgs, wmsgs) {
-		t.Errorf("msgs = %v, want %v", msgs, wmsgs)
+		t.Errorf("msgs = %v, \nwant %v", msgs, wmsgs)
 	}
 }
 
@@ -294,7 +294,6 @@ func testNonleaderElectionTimeoutRandomized(t *testing.T, state StateType) {
 		}
 		timeouts[time] = true
 	}
-
 	for d := et + 1; d < 2*et; d++ {
 		if !timeouts[d] {
 			t.Errorf("timeout in %d ticks should happen", d)
