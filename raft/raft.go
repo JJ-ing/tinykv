@@ -135,7 +135,6 @@ type Raft struct {
 	heartbeatTimeout int
 	// baseline of election interval
 	electionTimeout int
-
 	// random election interval
 	randomElectionTimeout int
 
@@ -175,7 +174,7 @@ func newRaft(c *Config) *Raft {
 		Prs[c.peers[i]] = &Progress{0, 0}
 	}
 
-	votes := make(map[uint64]bool)
+	votes := make(map[uint64]bool)	//will update once become candidate
 
 	msgs := make([]pb.Message, 0)
 
@@ -214,14 +213,6 @@ func (r *Raft) sendAppend(to uint64) bool {
 	return true
 }
 
-//// broadcastSendAppend send MessageType_MsgAppend to every others
-//func (r *Raft) broadcastSendAppend(){
-//	for i:= range r.Prs{
-//		if i!=r.id{
-//
-//		}
-//	}
-//}
 
 // sendHeartbeat sends a heartbeat RPC to the given peer.
 func (r *Raft) sendHeartbeat(to uint64) {
@@ -231,7 +222,7 @@ func (r *Raft) sendHeartbeat(to uint64) {
 		To: to,
 		From: r.id,
 		Term: r.Term,
-		//Commit: min(r.RaftLog.committed, r.Prs[to].Match),
+		Commit: min(r.RaftLog.committed, r.Prs[to].Match),
 	}
 	r.msgs = append(r.msgs, msg)
 }
@@ -272,7 +263,6 @@ func (r *Raft) broadcastRequestVote(){
 
 	for i:= range r.Prs{	//broadcast vote request
 		if i!=r.id {
-			//fmt.Printf("vote request --------> %d\n", i)
 			r.sendRequestVote(i)
 		}
 	}
@@ -323,7 +313,6 @@ func (r *Raft) becomeFollower(term uint64, lead uint64) {
 func (r *Raft) becomeCandidate() {
 	// Your Code Here (2A).
 	r.State = StateCandidate
-	//r.electionTimeout = 150 + rand.Intn(150)	// random election timeout (150-300ms)
 	r.randomElectionTimeout = r.electionTimeout + rand.Intn(r.electionTimeout)
 	r.electionElapsed = 0
 	r.Term = r.Term + 1
@@ -359,18 +348,7 @@ func (r *Raft) becomeLeader() {
 	//				Data: nil}
 	//r.RaftLog.entries = append(r.RaftLog.entries, noop)
 
-
 	r.broadcastHeartBeat()
-	//if(len(r.Prs)==1){
-	//	r.UpdateCommit()
-	//} else{
-	//	//Boardcast msgs to other Followers
-	//	for j:=1;j<=len(r.Prs);j++{
-	//		if uint64(j)!=r.id {
-	//			r.sendAppend(uint64(j))
-	//		}
-	//	}
-	//}
 
 }
 
@@ -458,7 +436,7 @@ func (r *Raft) LeaderStep(m pb.Message) error{
 	case pb.MessageType_MsgRequestVoteResponse:
 	case pb.MessageType_MsgSnapshot:
 	case pb.MessageType_MsgHeartbeat:
-		//r.handleHeartbeat(m)	//#?
+		r.handleHeartbeat(m)	//#?
 	case pb.MessageType_MsgHeartbeatResponse:
 		// deal with response of heartbeat RPC request
 		if m.Reject==true{	// a peer's term is higher than myself
@@ -555,13 +533,15 @@ func (r *Raft) handleRequestVote(m pb.Message) {
 		//fmt.Printf("isNewer-> m.LogTerm:%d, m.Index:%d, r.lastTerm:%d, r.lastIndex:%d\n",
 		//	m.LogTerm, m.Index, cur, r.RaftLog.LastIndex())
 	//}
-	if (m.Term>r.Term ||(m.Term==r.Term && (r.Vote==None||r.Vote==m.From))) && isNewer {	//term is higher and log is newer
+
+	//term is higher and log is newer
+	if (m.Term>r.Term ||(m.Term==r.Term && (r.Vote==None||r.Vote==m.From))) && isNewer {
 		msg.Reject = false
 		r.becomeFollower(m.Term, m.From)	// follower --> follower (reset)
 											// candidate --> follower
 											// leader --> follower
-		r.Vote = m.From				// first become follower, then set the vote
-		r.Term = m.Term				// press: to compare the term with other vote request's
+		r.Vote = m.From						// first become follower, then set the vote
+		r.Term = m.Term						// press: to compare the term with other vote request's
 	}
 	r.msgs = append(r.msgs, msg)
 }
